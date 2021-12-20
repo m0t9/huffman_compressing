@@ -147,7 +147,8 @@ int32_t main(int argc, char *argv[]) {
         size_forest_copy--;
 
         fwrite(&size_tree, sizeof(short), 1, OUTPUT_FILE);
-        fwrite(&size_forest_copy, sizeof(short), 1, OUTPUT_FILE);
+        char sfc = (size_forest_copy - 128);
+        fwrite(&sfc, sizeof(char), 1, OUTPUT_FILE);
         fwrite(&bit_cnt, sizeof(ll), 1, OUTPUT_FILE);
 
         for (short i = 0; i < size_tree; i++) {
@@ -213,8 +214,10 @@ int32_t main(int argc, char *argv[]) {
         short tsz, size_forest;
         unsigned char ch;
         ll bit_cnt;
+        char sfc;
         fread(&tsz, sizeof(short), 1, ARCHIVE);
-        fread(&size_forest, sizeof(short), 1, ARCHIVE);
+        sfc = fgetc(ARCHIVE);
+        size_forest = sfc + 128;
         fread(&bit_cnt, sizeof(ll), 1, ARCHIVE);
 
         Tree t[tsz];
