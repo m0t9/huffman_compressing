@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <memory.h>
 #include <cstring>
+#include <vector>
 
 using namespace std;
 
@@ -19,38 +20,44 @@ struct Tree {
     short left, right, parent, symbol;
 };
 
-void find_min(Forest forest[], short forest_size, short &min_pos1, short &min_pos2) {
-    short p1 = 0, p2 = 1;
-    if (forest[p1].freq > forest[p2].freq) {
-        p2 = 0;
-        p1 = 1;
-    }
-    for (short i = 3; i < forest_size; i++) {
-        if (forest[i].freq <= forest[p1].freq) {
-            p2 = p1;
-            p1 = i;
-            continue;
-        }
-        if (forest[i].freq <= forest[p2].freq) {
-            p2 = i;
-        }
-    }
-    min_pos1 = p1;
-    min_pos2 = p2;
-}
+vector<bool> bits;
 
-ll dfs(short v, Tree tree[], ll frequency[], short path_length = 0) {
+ll dfs(short v, Tree tree[], ll frequency[], vector<bool> enc[], short path_length = 0) {
     ll ans = 0LL;
     if (tree[v].left == tree[v].right && tree[v].left == -1) {
+        for (auto bit: bits) {
+            enc[tree[v].symbol].push_back(bit);
+        }
         return (path_length * frequency[tree[v].symbol]);
     }
     if (tree[v].left != -1) {
-        ans += dfs(tree[v].left, tree, frequency, path_length + 1);
+        bits.push_back(false);
+        ans += dfs(tree[v].left, tree, frequency, enc, path_length + 1);
+        bits.pop_back();
     }
     if (tree[v].right != -1) {
-        ans += dfs(tree[v].right, tree, frequency, path_length + 1);
+        bits.push_back(true);
+        ans += dfs(tree[v].right, tree, frequency, enc, path_length + 1);
+        bits.pop_back();
     }
     return ans;
+}
+
+void find_min(Forest forest[], short forest_size, short &min_pos1, short &min_pos2) {
+    min_pos1 = min_pos2 = -1;
+    for (short i = 0; i < forest_size; i++) {
+        if (min_pos1 == -1 || forest[i].freq <= forest[min_pos1].freq) {
+            min_pos1 = i;
+        }
+    }
+    for (short i = 0; i < forest_size; i++) {
+        if (i == min_pos1) {
+            continue;
+        }
+        if (min_pos2 == -1 || forest[i].freq <= forest[min_pos2].freq) {
+            min_pos2 = i;
+        }
+    }
 }
 
 int32_t main(int argc, char *argv[]) {
@@ -89,8 +96,7 @@ int32_t main(int argc, char *argv[]) {
             tree[i].symbol = forest[i].symbol;
         }
 
-        short min_p1, min_p2, size_tree = size_forest;
-        short size_forest_copy = size_forest;
+        short min_p1, min_p2, size_tree = size_forest, size_forest_copy = size_forest;
         while (size_forest > 1) {
             find_min(forest, size_forest, min_p1, min_p2);
 
@@ -109,40 +115,11 @@ int32_t main(int argc, char *argv[]) {
             size_tree++;
         }
 
-        short encoding[256][33];
-        for (auto &i : encoding) {
-            memset(i, 0, sizeof(i));
-        }
-
-        for (short i = 0; i < size_forest_copy; i++) {
-            short sym = tree[i].symbol;
-            short vertex = i, ind = 1;
-            encoding[sym][0] = 0;
-            while (tree[vertex].parent != -1) {
-                short par = tree[vertex].parent;
-                if (tree[par].left == vertex) {
-                    encoding[sym][ind] = 0;
-                } else {
-                    encoding[sym][ind] = 1;
-                }
-                encoding[sym][0]++;
-                ind++;
-                vertex = par;
-            }
-            for (short j = 1; j <= encoding[sym][0] / 2; j++) {
-                short to_swap = encoding[sym][j];
-                encoding[sym][j] = encoding[sym][encoding[sym][0] - j + 1];
-                encoding[sym][encoding[sym][0] - j + 1] = to_swap;
-            }
-        }
-
+        vector<bool> encoding[256];
         INPUT_FILE = fopen(argv[3], "rb");
         short written_bits = 0;
-        unsigned char x = 0;
-        ll bit_cnt = dfs(size_tree - 1, tree, frequency);
-
-        unsigned char buffer[MAX_BUFFER_SIZE];
-        short buffer_size = 0;
+        char x = 0;
+        ll bit_cnt = dfs(size_tree - 1, tree, frequency, encoding);
 
         size_forest_copy--;
 
@@ -173,36 +150,25 @@ int32_t main(int argc, char *argv[]) {
         }
 
         while (fscanf(INPUT_FILE, "%c", &c) != -1) {
-            for (short i = 1; i <= encoding[c][0]; i++) {
+            for (auto b: encoding[c]) {
                 if (written_bits == 8) {
-                    buffer[buffer_size++] = x;
-                    if (buffer_size == MAX_BUFFER_SIZE) {
-                        for (short j = 0; j < buffer_size; j++) {
-                            fwrite(&buffer[j], sizeof(buffer[j]), 1, OUTPUT_FILE);
-                        }
-                        buffer_size = 0;
-                    }
+                    written_bits = 0;
+                    fwrite(&x, sizeof(char), 1, OUTPUT_FILE);
                     x = 0;
-                    written_bits = 0LL;
                 }
                 x <<= 1;
-                written_bits++;
-                if (encoding[c][i] == 1) {
+                if (b) {
                     x++;
                 }
-            }
-        }
-
-        if (written_bits > 0) {
-            while (written_bits < 8) {
-                x <<= 1;
                 written_bits++;
             }
-            buffer[buffer_size++] = x;
         }
-
-        for (short j = 0; j < buffer_size; j++) {
-            fwrite(&buffer[j], sizeof(buffer[j]), 1, OUTPUT_FILE);
+        if (written_bits != 0) {
+            while (written_bits != 8) {
+                written_bits++;
+                x <<= 1;
+            }
+            fwrite(&x, sizeof(char), 1, OUTPUT_FILE);
         }
     } else {
         FILE *ARCHIVE;
