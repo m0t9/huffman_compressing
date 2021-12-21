@@ -22,25 +22,23 @@ struct Tree {
 
 vector<bool> bits;
 
-ll dfs(short v, Tree tree[], ll frequency[], vector<bool> enc[], short path_length = 0) {
-    ll ans = 0LL;
+void dfs(short v, Tree tree[], vector<bool> enc[]) {
     if (tree[v].left == tree[v].right && tree[v].left == -1) {
         for (auto bit: bits) {
             enc[tree[v].symbol].push_back(bit);
         }
-        return (path_length * frequency[tree[v].symbol]);
+        return;
     }
     if (tree[v].left != -1) {
         bits.push_back(false);
-        ans += dfs(tree[v].left, tree, frequency, enc, path_length + 1);
+        dfs(tree[v].left, tree, enc);
         bits.pop_back();
     }
     if (tree[v].right != -1) {
         bits.push_back(true);
-        ans += dfs(tree[v].right, tree, frequency, enc, path_length + 1);
+        dfs(tree[v].right, tree, enc);
         bits.pop_back();
     }
-    return ans;
 }
 
 void find_min(Forest forest[], short forest_size, short &min_pos1, short &min_pos2) {
@@ -69,10 +67,12 @@ int32_t main(int argc, char *argv[]) {
         OUTPUT_FILE = fopen(argv[2], "wb");
 
         ll frequency[256];
+        int byte_count = 0;
         memset(frequency, 0LL, sizeof(frequency));
 
         unsigned char c;
         while (fscanf(INPUT_FILE, "%c", &c) != EOF) {
+            byte_count++;
             frequency[c]++;
         }
 
@@ -90,9 +90,7 @@ int32_t main(int argc, char *argv[]) {
 
         Tree tree[2049];
         for (short i = 0; i < size_forest; i++) {
-            tree[i].left = -1;
-            tree[i].right = -1;
-            tree[i].parent = -1;
+            tree[i].left = tree[i].right = tree[i].parent = -1;
             tree[i].symbol = forest[i].symbol;
         }
 
@@ -119,14 +117,14 @@ int32_t main(int argc, char *argv[]) {
         INPUT_FILE = fopen(argv[3], "rb");
         short written_bits = 0;
         char x = 0;
-        ll bit_cnt = dfs(size_tree - 1, tree, frequency, encoding);
+        dfs(size_tree - 1, tree, encoding);
 
         size_forest_copy--;
 
         fwrite(&size_tree, sizeof(short), 1, OUTPUT_FILE);
         char sfc = (size_forest_copy - 128);
         fwrite(&sfc, sizeof(char), 1, OUTPUT_FILE);
-        fwrite(&bit_cnt, sizeof(ll), 1, OUTPUT_FILE);
+        fwrite(&byte_count, sizeof(int), 1, OUTPUT_FILE);
 
         for (short i = 0; i < size_tree; i++) {
             if (tree[i].parent == -1) {
@@ -179,12 +177,12 @@ int32_t main(int argc, char *argv[]) {
 
         short tsz, size_forest;
         unsigned char ch;
-        ll bit_cnt;
+        int byte_cnt;
         char sfc;
         fread(&tsz, sizeof(short), 1, ARCHIVE);
         sfc = fgetc(ARCHIVE);
         size_forest = sfc + 128;
-        fread(&bit_cnt, sizeof(ll), 1, ARCHIVE);
+        fread(&byte_cnt, sizeof(int), 1, ARCHIVE);
 
         Tree t[tsz];
         for (short i = 0; i < tsz; i++) {
@@ -222,7 +220,6 @@ int32_t main(int argc, char *argv[]) {
                 } else {
                     v = t[v].left;
                 }
-                bit_cnt--;
                 if (t[v].left == -1 && t[v].right == -1) {
                     unsigned char x;
                     x = t[v].symbol;
@@ -234,8 +231,9 @@ int32_t main(int argc, char *argv[]) {
                         buffer_size = 0;
                     }
                     v = tsz - 1;
+                    byte_cnt--;
                 }
-                if (!bit_cnt) {
+                if (!byte_cnt) {
                     for (short j = 0; j < buffer_size; j++) {
                         fwrite(&buffer[j], sizeof(buffer[j]), 1, OUTPUT_FILE);
                     }
