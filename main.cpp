@@ -155,7 +155,12 @@ int32_t main(int argc, char *argv[]) {
                     tree[i].parent++;
                 }
             }
-            fwrite(&tree[i].parent, sizeof(short), 1, OUTPUT_FILE);
+            if (size_tree >= 256) {
+                fwrite(&tree[i].parent, sizeof(short), 1, OUTPUT_FILE);
+            } else {
+                char p = tree[i].parent;
+                fwrite(&p, sizeof(p), 1, OUTPUT_FILE);
+            }
             if (i <= size_forest_copy) {
                 short sym = tree[i].symbol;
                 sym -= 128;
@@ -221,7 +226,13 @@ int32_t main(int argc, char *argv[]) {
 
         for (short j = 0; j < tsz; j++) {
             short p;
-            fread(&p, sizeof(short), 1, ARCHIVE);
+            char p_char;
+            if (tsz >= 256) {
+                fread(&p, sizeof(short), 1, ARCHIVE);
+            } else {
+                fread(&p_char, sizeof(char), 1, ARCHIVE);
+                p = p_char;
+            }
             if (j <= size_forest) {
                 char s = fgetc(ARCHIVE);
                 t[j].symbol = s + 128;
