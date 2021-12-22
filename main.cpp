@@ -120,11 +120,28 @@ int32_t main(int argc, char *argv[]) {
         dfs(size_tree - 1, tree, encoding);
 
         size_forest_copy--;
-
+        if (byte_count <= 255) {
+            size_tree |= (1 << 14);
+        } else if (byte_count <= 32767) {
+            size_tree |= (1 << 15);
+        }
         fwrite(&size_tree, sizeof(short), 1, OUTPUT_FILE);
+        if (byte_count <= 255) {
+            size_tree ^= (1 << 14);
+        } else if (byte_count <= 32767) {
+            size_tree ^= (1 << 15);
+        }
         char sfc = (size_forest_copy - 128);
         fwrite(&sfc, sizeof(char), 1, OUTPUT_FILE);
-        fwrite(&byte_count, sizeof(int), 1, OUTPUT_FILE);
+        if (byte_count <= 255) {
+            unsigned char k = byte_count;
+            fwrite(&k, sizeof(k), 1, OUTPUT_FILE);
+        } else if (byte_count <= 32767) {
+            short btcnt = byte_count;
+            fwrite(&btcnt, sizeof(short), 1, OUTPUT_FILE);
+        } else {
+            fwrite(&byte_count, sizeof(int), 1, OUTPUT_FILE);
+        }
 
         for (short i = 0; i < size_tree; i++) {
             if (tree[i].parent == -1) {
@@ -182,7 +199,20 @@ int32_t main(int argc, char *argv[]) {
         fread(&tsz, sizeof(short), 1, ARCHIVE);
         sfc = fgetc(ARCHIVE);
         size_forest = sfc + 128;
-        fread(&byte_cnt, sizeof(int), 1, ARCHIVE);
+        if (tsz & (1 << 15)) {
+            short btcnt;
+            fread(&btcnt, sizeof(short), 1, ARCHIVE);
+            byte_cnt = btcnt;
+            tsz ^= (1 << 15);
+        } else if (tsz & (1 << 14)) {
+            unsigned char k;
+            fread(&k, sizeof(unsigned char), 1, ARCHIVE);
+            byte_cnt = k;
+            tsz ^= (1 << 14);
+        } else {
+            fread(&byte_cnt, sizeof(int), 1, ARCHIVE);
+        }
+
 
         Tree t[tsz];
         for (short i = 0; i < tsz; i++) {
