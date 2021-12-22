@@ -128,7 +128,7 @@ int32_t main(int argc, char *argv[]) {
         fwrite(&size_tree, sizeof(short), 1, OUTPUT_FILE);
         if (byte_count <= 255) {
             size_tree ^= (1 << 14);
-        } else if (byte_count <= 32767) {
+        } else if (byte_count <= 65535) {
             size_tree ^= (1 << 15);
         }
         char sfc = (size_forest_copy - 128);
@@ -136,8 +136,8 @@ int32_t main(int argc, char *argv[]) {
         if (byte_count <= 255) {
             unsigned char k = byte_count;
             fwrite(&k, sizeof(k), 1, OUTPUT_FILE);
-        } else if (byte_count <= 32767) {
-            short btcnt = byte_count;
+        } else if (byte_count <= 65535) {
+            unsigned short btcnt = byte_count;
             fwrite(&btcnt, sizeof(short), 1, OUTPUT_FILE);
         } else {
             fwrite(&byte_count, sizeof(int), 1, OUTPUT_FILE);
@@ -205,7 +205,7 @@ int32_t main(int argc, char *argv[]) {
         sfc = fgetc(ARCHIVE);
         size_forest = sfc + 128;
         if (tsz & (1 << 15)) {
-            short btcnt;
+            unsigned short btcnt;
             fread(&btcnt, sizeof(short), 1, ARCHIVE);
             byte_cnt = btcnt;
             tsz ^= (1 << 15);
